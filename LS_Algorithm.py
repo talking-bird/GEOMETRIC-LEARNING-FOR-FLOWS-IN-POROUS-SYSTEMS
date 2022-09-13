@@ -286,7 +286,7 @@ if __name__ == '__main__':
     G = nx.read_gpickle(f"pore_network_0{ks}.gpickle")
 
     #select nodes
-    nodes = random.sample(list(np.arange(280)), 100)
+    nodes = np.arange(G.number_of_nodes())
 
 
     print(get_nme(nodes, ks, G))
