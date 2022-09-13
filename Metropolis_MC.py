@@ -15,7 +15,7 @@ from LS_Algorithm import get_nme
 
 def adj_matrix(G):
     '''
-    creates adj and neigbors:
+    creates adj and neighbors:
     adj: 2D adjacency matrix of a graph
     neighbors: list of lists of neighbors (indexes from 0 to N-1, where N is a number of nodes)
     '''
@@ -28,7 +28,7 @@ def adj_matrix(G):
     return adj, neighbors
 
 
-def system_initialization(G, N_sensors):
+def system_initialization(G, N_sensors, random_state=None):
     '''
     - Uses previously stated function adj_matrix to initialize 
     all needed information about graph
@@ -43,7 +43,11 @@ def system_initialization(G, N_sensors):
     N_nodes = nx.number_of_nodes(G)
 
     adj, neighbors = adj_matrix(G)
-    sensors = np.array([(N_nodes*i)//N_sensors for i in range(N_sensors)])
+    if random_state is None:
+        sensors = np.array([(N_nodes*i)//N_sensors for i in range(N_sensors)])
+    else:
+        rng_gen = np.random.RandomState(random_state)
+        sensors = rng_gen.choice(np.arange(N_nodes), N_sensors)
 
     return adj, neighbors, sensors
 
@@ -53,7 +57,7 @@ def step(sensors, E_tot, Statistics, neighbors, adj):
     '''
     one step of a Metropolis algorithm cycle:
 
-    1. shifts one random sensor to the neigboring node
+    1. shifts one random sensor to the neighboring node
     2. calculates the difference in energy
     3. accepts\rejects new location of the sensor
     '''
@@ -156,6 +160,8 @@ def init_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--T',default=0.01, type=float)
     parser.add_argument('--N_sensors',default=5, type=int)
+    parser.add_argument('--random_state',default=None, type=int)
+    parser.add_argument('--steps',default=10_000, type=int)
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -173,8 +179,9 @@ if __name__ == '__main__':
     T = config.T
     N_sensors = config.N_sensors
     steps = config.steps
+    random_state = config.random_state
     sensors_loc_df = pd.DataFrame(columns=np.arange(N_sensors))
-    adj, neighbors, sensors = system_initialization(G, N_sensors)
+    adj, neighbors, sensors = system_initialization(G, N_sensors, random_state)
     sensors, Statistics, best_sensor_loc, E_min =\
         simulation(adj, neighbors, sensors, steps)
     wandb.log({'sensors movement table': sensors_loc_df}, commit=False)
