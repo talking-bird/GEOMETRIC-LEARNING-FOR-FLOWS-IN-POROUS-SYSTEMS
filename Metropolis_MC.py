@@ -62,26 +62,28 @@ def step(sensors, E_tot, Statistics, neighbors, adj):
     3. accepts\rejects new location of the sensor
     '''
 
-    # choose the random sensor
-    choice = rng.choice
-    old_sensor_number = choice(np.arange(N_sensors))
-    old_node_number = sensors[old_sensor_number]
+    # choose the random sensor which can be shifted
+    while(True):
+        choice = rng.choice
+        old_sensor_number = choice(np.arange(N_sensors)) # from 0 to max number of sensors
+        old_node_number = sensors[old_sensor_number] # number on a graph - from 0 to 284
 
-    # skip to the next step if there are no neighbors
-    if len(neighbors[old_node_number]) == 0:
-        # no neighbors
-        Statistics[0] +=1 
-        return sensors, E_tot, Statistics
+        num_of_neighbors = len(neighbors[old_node_number])
+        # skip to the next step if there are no neighbors
+        if num_of_neighbors == 0:
+            # no neighbors
+            continue
 
-    # choose the random neighboring node of the chosen one
-    num_of_neighbors = len(neighbors[old_node_number])
-    neighboring_loc = choice(np.arange(num_of_neighbors))
-    new_node_number = neighbors[old_node_number][neighboring_loc]
-
-    # skip to the next step if the chosen node is occupied
-    if new_node_number in sensors:
-        Statistics[1] +=1
-        return sensors, E_tot, Statistics
+        # choose the random neighboring node of the chosen one
+        neighboring_unoccupied_locs = [neighbor_number for neighbor_number in neighbors[old_node_number]
+                                       if neighbor_number not in sensors]
+        num_of_unoccupied_neghbors = len(neighboring_unoccupied_locs)
+        if num_of_unoccupied_neghbors == 0:
+            # no unoccupied neghbors
+            continue
+        neighboring_loc = choice(neighboring_unoccupied_locs)
+        new_node_number = neighbors[old_node_number][neighboring_loc]
+        break
 
     #shift the sensor
     # sensors_new = np.delete(sensors, old_sensor_number) 
@@ -98,12 +100,12 @@ def step(sensors, E_tot, Statistics, neighbors, adj):
     if dp > rand:
         # accept
         E_tot = E_new
-        Statistics[2] +=1
+        Statistics[0] +=1
         return sensors_new, E_tot, Statistics
     else:
         # reject
         #return the sensor back
-        Statistics[3] +=1
+        Statistics[1] +=1
         return sensors, E_tot, Statistics
 
     
@@ -113,10 +115,8 @@ def cycle(sensors, E_tot, neighbors, adj, steps):
     stores information about energy levels during the simulation
     '''
     sensors_loc_df.loc[0] = sensors
-    Statistics = np.array([0.,  # 'no_neighbors'
-                        0.,  # 'occupied'
-                        0.,  # 'accepted'
-                        0.]) # 'rejected'
+    Statistics = np.array([0.,  # 'accepted'
+                           0.]) # 'rejected'
 
     best_sensor_loc = sensors.copy()
     E_min = E_tot
@@ -134,8 +134,8 @@ def cycle(sensors, E_tot, neighbors, adj, steps):
             best_step = i
             wandb.log({'E/Emin': E_min, 'Best sensor location': best_sensor_loc, 'best step': best_step},commit=False)
         
-        wandb.log({'E/E': E_tot, 'Statistics/no_neighbors':Statistics[0], 'Statistics/occupied':Statistics[1], 
-                   'Statistics/accepted':Statistics[2], 'Statistics/rejected':Statistics[3]})
+        wandb.log({'E/E': E_tot, 'Statistics/accepted':Statistics[0], 
+                   'Statistics/rejected':Statistics[1]})
         
     Statistics /= steps
     return sensors, E_tot, Statistics,\
